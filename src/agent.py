@@ -24,11 +24,19 @@ args_schema = {
   "required": ["pickup", "destination", "time"]
 }
 
+args_schema_create_ticket = {
+  "type": "object",
+  "properties": {
+    "description": {"type": "string", "description": "Ticket Description"},
+    "summary": {"type": "string", "description": "Ticket Summary"},
+  },
+  "required": ["description", "summary"]
+}
 
 # 1. Define the tools
 searchtool = TavilySearch(max_results=2)
 book_cab_tool = Tool.from_function(func=tools.book_cab, name="book_cab", description="Books a cab by specifying pickup, destination and time.",args_schema=args_schema)
-create_ticket_tool = Tool.from_function(func=tools.create_ticket, name="create_ticket", description="Used for creating a ticket")
+create_ticket_tool = Tool.from_function(func=tools.create_ticket, name="create_ticket", description="Used for creating a ticket",args_schema=args_schema_create_ticket)
 
 tool_executor = ToolNode([searchtool, book_cab_tool, create_ticket_tool])
 #llm = ChatGroq(model="llama3-8b-8192")

@@ -14,6 +14,7 @@ import random
 import string
 import secrets
 import string
+import datetime
 
 def generate_secure_id(length=10):
     alphabet = string.ascii_uppercase + string.digits
@@ -51,8 +52,8 @@ def book_cab(pickup: str, destination: str, time: str) -> str:
     )
 
 
-@tool
-def create_ticket(summary: str, description: str) -> str:
+
+def create_ticket(description: str, summary: str) -> str:
     """Creates an IT support ticket in Jira or a similar system."""
     print(f"--- Calling Jira API ---")
     # In a real scenario, you would make an API call like this:
@@ -72,4 +73,16 @@ def create_ticket(summary: str, description: str) -> str:
     #     return f"Successfully created ticket {ticket_key} with summary: '{summary}'."
     # else:
     #     return f"Failed to create ticket. Jira returned: {response.text}"
-    return f"TICKET CREATED: '{summary}'. (This is a mock response)."
+    prefix = "INC"
+    number = random.randint(1000000, 9999999)
+    ticket_id = f"{prefix}{number}"
+
+    # Optionally include a timestamp or mock sys_id
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        f"Ticket Created with Ticket id : {ticket_id} at {timestamp}."
+        f"Summary: {{summary}}\n"
+        f"You can check the status in here IT@LBG."   
+    }
+
