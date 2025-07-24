@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.tools import Tool
 #from langchain_core.schema import ToolMessage  # or wherever you import it
+from src.rag_engine import retrieve_answer
 
 load_dotenv()
 args_schema = {
@@ -33,16 +34,41 @@ args_schema_create_ticket = {
   "required": ["description", "summary"]
 }
 
+args_schema_for_rag_tool = {
+    "type": "object", 
+    "properties": {
+        "question": {"type": "string", "description": "Ask anything related to HR or onboarding related to company"}
+    }, 
+    "required": ["question"]
+}
+
 # 1. Define the tools
 searchtool = TavilySearch(max_results=2)
+search_tool = Tool.from_function(
+    func=searchtool.invoke,
+    name="web_search",
+    description="Use this tool to search the public internet for general knowledge or external information."
+)
+
 book_cab_tool = Tool.from_function(func=tools.book_cab, name="book_cab", description="Books a cab by specifying pickup, destination and time.",args_schema=args_schema)
 create_ticket_tool = Tool.from_function(func=tools.create_ticket, name="create_ticket", description="Used for creating a ticket",args_schema=args_schema_create_ticket)
 
-tool_executor = ToolNode([searchtool, book_cab_tool, create_ticket_tool])
+
+rag_tool = Tool.from_function(
+    func=tools.company_docs_query,
+    name="company_docs_query",
+    description=(
+        "Use this tool to answer questions about company policies, HR guidelines, "
+        "onboarding procedures, and internal documentation. This tool accesses internal documents."
+    ),
+    args_schema=args_schema_for_rag_tool
+)
+
+tool_executor = ToolNode([search_tool, book_cab_tool, create_ticket_tool,rag_tool])
 #llm = ChatGroq(model="llama3-8b-8192")
 llm = ChatGroq(temperature=0, model="llama-3.3-70b-versatile")
 
-llm_with_tools = llm.bind(tools=[convert_to_openai_tool(t) for t in [searchtool,tools.book_cab, tools.create_ticket]])
+llm_with_tools = llm.bind(tools=[convert_to_openai_tool(t) for t in [search_tool,tools.book_cab, tools.create_ticket,tools.company_docs_query]])
 
 # 2. Define the agent's state
 class AgentState(TypedDict):
@@ -72,8 +98,15 @@ def should_continue(state: AgentState):
 
 def call_model(state: AgentState):
     """The primary node that calls the LLM."""
+    system_message = HumanMessage(content=(
+    "You are a company onboarding assistant. Prefer using internal tools like 'company_docs_query' "
+    "for HR and onboarding questions. "
+    "Use 'book_cab' for booking a cab. Use 'create_ticket' for creating ticket"
+    "Use 'web_search' only for external queries."
+    ))
     messages = state["messages"]
     response = llm_with_tools.invoke(messages)
+    print("LLM Response:", response.content)
 # Append the new AI response to the message list
     messages.append(response)
 # Find the latest ToolMessage (if any)

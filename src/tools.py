@@ -1,7 +1,15 @@
 import requests
 import os
 from langchain_core.tools import tool
-
+#from langchain.tools import tool
+from src.rag_engine import retrieve_answer
+#from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_pinecone import PineconeVectorStore # <-- Import PineconeVectorStore
+from langchain_groq import ChatGroq
+from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 # Placeholder for actual API calls
 JIRA_API_URL = "https://your-company.atlassian.net/rest/api/2/issue"
 JIRA_USER = "your-jira-email"
@@ -15,6 +23,12 @@ import string
 import secrets
 import string
 import datetime
+from pinecone import Pinecone
+from sentence_transformers import SentenceTransformer
+
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+index = pc.Index("chat-bot-hackathon")
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def generate_secure_id(length=10):
     alphabet = string.ascii_uppercase + string.digits
@@ -86,3 +100,37 @@ def create_ticket(description: str, summary: str) -> str:
         f"You can check the status in here IT@LBG."   
     }
 
+
+PINECONE_INDEX_NAME = "chat-bot-hackathon"
+embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+vectorstore = PineconeVectorStore(index_name=PINECONE_INDEX_NAME, embedding=embedding_function)
+retriever = vectorstore.as_retriever(search_kwargs={'k': 1}) # Retrieve top 2 chunks
+llm = ChatGroq(temperature=0, model_name="llama3-70b-8192")
+template = """
+Answer the question based ONLY on the following context.
+If the context does not contain the answer, state that you don't have enough information to answer.
+Do not use any information outside of this context.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+prompt = PromptTemplate.from_template(template)
+rag_chain = (
+    {"context": retriever, "question": RunnablePassthrough()}
+    | prompt
+    | llm
+    | StrOutputParser()
+)
+def company_docs_query(question: str) -> str:
+    # ... (no change in this function)
+    print(f"--- Looking up company policy for: '{question}' ---")
+    return rag_chain.invoke(question)
+# def company_docs_query(query: str) -> str:
+#     """Answers HR or project-related questions using company documents."""
+#     query_emb = model.encode([query])[0]
+#     results = index.query(vector=query_emb.tolist(), top_k=2, include_metadata=True)
+#     context = "\n".join([match['metadata']['text'] for match in results['matches']])
+#     return f"Based on company documents:\n{context}"
