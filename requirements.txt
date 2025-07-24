@@ -4,3 +4,9 @@ langsmith
 python-dotenvuv 
 langchain-groq
 langchain_tavily
+langchain-huggingface
+langchain-community
+pinecone-client
+sentence-transformers
+langchain-pinecone
+typing_extensions
