@@ -2,7 +2,6 @@ import requests
 import os
 from langchain_core.tools import tool
 #from langchain.tools import tool
-from src.rag_engine import retrieve_answer
 #from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore # <-- Import PineconeVectorStore
@@ -10,6 +9,9 @@ from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+from dotenv import load_dotenv
+load_dotenv()
+
 # Placeholder for actual API calls
 JIRA_API_URL = "https://your-company.atlassian.net/rest/api/2/issue"
 JIRA_USER = "your-jira-email"
