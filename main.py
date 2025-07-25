@@ -6,7 +6,9 @@ from typing import Optional, Dict
 from src.agent import app as langgraph_app
 from langchain_core.messages import HumanMessage
 from fastapi.middleware.cors import CORSMiddleware
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 # Use a dictionary to store conversation states by session_id
 conversations = {}
 
